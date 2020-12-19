@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:ftp="http://www.mulesoft.org/schema/mule/ee/ftp" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
+http://www.mulesoft.org/schema/mule/ee/ftp http://www.mulesoft.org/schema/mule/ee/ftp/current/mule-ftp-ee.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/cxf http://www.mulesoft.org/schema/mule/cxf/current/mule-cxf.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+    <cxf:configuration name="CXF_Configuration_1" enableMuleSoapHeaders="true" initializeStaticBusInstance="true" doc:name="CXF Configuration"/>
+    <ws:consumer-config name="Web_Service_Consumer" wsdlLocation="LesAsyn.wsdl" service="EAILESAsynNotifyService" port="EAI_LES_AsynNotifyPort" serviceAddress="http://10.173.1.30:8080/les/service/EAILESAsynNotifyService" doc:name="Web Service Consumer"/>
+    <http:request-config name="HTTP_Request_Configuration" host="10.173.1.199" port="80" doc:name="HTTP Request Configuration"/>
+    <ftp:connector name="FTP" pollingFrequency="1000" validateConnections="true" doc:name="FTP"/>
+    <db:oracle-config name="Oracle_Configuration" host="10.211.55.3" port="1521" instance="XEPDB1" user="dsgc" password="dsgc" doc:name="Oracle Configuration"/>
+    <db:template-query name="Template_Query" doc:name="Template Query">
+        <db:parameterized-query><![CDATA[INSERT INTO TEST(CODE,NAME,VERSION) VALUES(:code,:name,:version)]]></db:parameterized-query>
+        <db:in-param name="code" type="VARCHAR" defaultValue="#[payload.code]"/>
+        <db:in-param name="name" type="VARCHAR" defaultValue="#[payload.name]"/>
+        <db:in-param name="version" type="NUMERIC" defaultValue="#[payload.version]"/>
+    </db:template-query>
+	<db:template-query name="Template_Delete" doc:name="Template Query">
+		<db:parameterized-query><![CDATA[DELETE FROM :tableName]]></db:parameterized-query>
+		<db:in-param name="tableName" type="VARCHAR" defaultValue="#[tableName]"/>
+	</db:template-query>
+    <flow name="ESB_Demo_DB02_InsertData">
+        <http:listener config-ref="HTTP_Listener_Demo_Cfg" path="/ESB/Demo/DB02" doc:name="HTTP"/>
+        <logger message="#[payload]" level="INFO" category="--payload--&gt;" doc:name="Logger"/>
+        <json:json-to-object-transformer returnClass="java.util.List" doc:name="JSON to Object"/>
+        <db:insert config-ref="Oracle_Configuration" bulkMode="true" doc:name="Database">
+            <db:template-query-ref name="Template_Query"/>
+        </db:insert>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+    </flow>
+    <flow name="ESB_Demo_DB03_DeleteData">
+        <http:listener config-ref="HTTP_Listener_Demo_Cfg" path="/ESB/Demo/DB03" doc:name="HTTP"/>
+        <set-variable variableName="tableName" value="#['TEST ']" encoding="UTF-8" doc:name="Variable"/>
+        <logger message="#[tableName]" level="INFO" category="--tableName--&gt;" doc:name="Logger"/>
+		<db:delete config-ref="Oracle_Configuration" doc:name="Database">
+			<db:dynamic-query><![CDATA[DELETE FROM #[tableName]]]></db:dynamic-query>
+		</db:delete>
+        <set-payload value="#['{&quot;rtnCode&quot;:&quot;S&quot;,&quot;rtnMsg&quot;:&quot;删除成功！&quot;}']" encoding="UTF-8" mimeType="application/json" doc:name="Set Payload"/>
+    </flow>
+</mule>

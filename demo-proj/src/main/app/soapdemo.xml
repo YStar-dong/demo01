@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/cxf http://www.mulesoft.org/schema/mule/cxf/current/mule-cxf.xsd
+http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+	<cxf:configuration name="CXF_Configuration" enableMuleSoapHeaders="true" initializeStaticBusInstance="true" doc:name="CXF Configuration"/>
+	<ws:consumer-config name="Web_Service_Consumer1" wsdlLocation="EAILESAsynNotifyService.wsdl" service="EAILESAsynNotifyService" port="EAI_LES_AsynNotifyPort" serviceAddress="http://10.173.1.161:8081/les/service/EAILESAsynNotifyService" doc:name="Web Service Consumer"/>
+	<flow name="ESB_Demo_SoapDemo01">
+		<http:listener config-ref="HTTP_Listener_Demo_Cfg" path="/ESB/Demo/SoapDemo01" doc:name="HTTP"/>
+		<object-to-string-transformer doc:name="Object to String"/>
+		<logger message="#[payload]" level="INFO" category="--reqBody--&gt;" doc:name="Logger"/>
+		<cxf:proxy-service configuration-ref="CXF_Configuration" payload="body" doc:name="CXF"/>
+		<ws:consumer config-ref="Web_Service_Consumer" operation="AsynNotify" doc:name="Web Service Consumer"/>
+		<json:xml-to-json-transformer doc:name="XML to JSON"/>
+		<logger message="#[payload]" level="INFO" category="--resBody--&gt;" doc:name="Logger"/>
+		<exception-strategy ref="global_Exception_Strategy" doc:name="Reference Exception Strategy"/>
+	</flow>
+	<flow name="soapdemoFlow">
+		<http:listener config-ref="HTTP_Listener_Demo_Cfg" path="/Demo/SoapDemo" doc:name="HTTP"/>
+		<cxf:proxy-service doc:name="CXF" configuration-ref="CXF_Configuration_1" namespace="http://services.chery.com/services/" payload="body" service="EAILESAsynNotifyService" wsdlLocation="EAILESAsynNotifyService.wsdl"/>
+		<ws:consumer config-ref="Web_Service_Consumer1" operation="AsynNotify" doc:name="Web Service Consumer"/>
+	</flow>
+</mule>

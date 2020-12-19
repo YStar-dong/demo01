@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd">
+	
+	<!-- 系统异常捕获 定义-->
+	<catch-exception-strategy name="CatchExceptionStrategy">
+		<set-property propertyName="http.status" value="500"
+			doc:name="Property" />
+		<set-payload value="#['{&quot;code&quot;:&quot;500&quot;, &quot;data&quot;:null,&quot;stack&quot;: {&quot;errCode&quot;:500,&quot;errMsg&quot;: &quot;' + exception.getCauseException().getMessage() +'&quot;}}']"
+			doc:name="Set Payload" />
+		<custom-transformer
+			class="com.definesys.dsgc.mule.processor.MuleMsgProcessor" doc:name="OB_RES">
+			<spring:property name="stage" value="OB_RES" />
+
+		</custom-transformer>
+		<custom-transformer
+			class="com.definesys.dsgc.mule.processor.MuleMsgProcessor" doc:name="INST_RES">
+			<spring:property name="stage" value="INST_RES" />
+		</custom-transformer>
+	</catch-exception-strategy>
+	
+	<!-- 安全校验异常捕获定义 -->
+	<catch-exception-strategy name="securityException"
+		when="#[exception.causeMatches('com.definesys.dsgc.mule.security.*')]">
+		<set-property propertyName="http.status" value="401"
+			doc:name="Property" />
+		<set-payload value="#['{&quot;code&quot;: &quot;500&quot;, &quot;data&quot;: null,&quot;stack&quot;: {&quot;errCode&quot;: 401,&quot;errMsg&quot;:&quot;Unauthorized&quot;}}']" doc:name="Set Payload" />
+	</catch-exception-strategy>
+	
+	<!-- 全局异常定义 -->
+	<choice-exception-strategy name="global_Exception_Strategy">
+		<exception-strategy ref="securityException"
+			doc:name="Reference Exception Strategy" />
+		<exception-strategy ref="CatchExceptionStrategy"
+			doc:name="Reference Exception Strategy" />
+	</choice-exception-strategy>
+	
+
+</mule>
